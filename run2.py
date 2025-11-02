@@ -20,29 +20,35 @@ def solve(edges: list[tuple[str, str]]) -> list[str]:
 
     gateways = sorted({node for node in graph if node.isupper()})
     virus = 'a'
-    result = []
+    results = []
 
     while gateways and virus:
+        # Находим ближайший шлюз для удаления
         nearest_gateways = get_nearest_gateways(graph, gateways, virus)
         target, dist = nearest_gateways[0]
         gateway, node = target
 
-        result.append(f"{gateway}-{node}")
+        # Удаляем шлюз
+        results.append(f"{gateway}-{node}")
         graph[node].remove(gateway)
         graph[gateway].remove(node)
         if not graph[gateway]:
             graph.pop(gateway)
             gateways.remove(gateway)
 
-        if len(nearest_gateways) > 1:
-            gateway = nearest_gateways[1][0][0]
+        # Находим ближайший шлюз для вируса
+        new_nearest_gateways = get_nearest_gateways(graph, gateways, virus)
+        if new_nearest_gateways:
+            target, dist = new_nearest_gateways[0]
+            gateway, node = target
 
+        # Перемещяем вирус
         virus_next = move_virus(graph, virus, gateway)
         if not virus_next:
             break
         virus = virus_next
 
-    return result
+    return results
 
 
 def get_nearest_gateways(graph: dict[str: list[str]],
@@ -51,6 +57,7 @@ def get_nearest_gateways(graph: dict[str: list[str]],
     queue = deque()
     distances = {}
     result = {}
+    path_from = {}
 
     queue.append(virus)
     distances[virus] = 0
@@ -63,10 +70,10 @@ def get_nearest_gateways(graph: dict[str: list[str]],
             if neighbor not in distances:
                 queue.append(neighbor)
                 distances[neighbor] = current_dist + 1
+                path_from[neighbor] = current
             if neighbor in gateways:
-                for node in graph[neighbor]:
-                    if node not in gateways:
-                        result[(neighbor, node)] = distances[neighbor]
+                if neighbor in path_from:
+                    result[(neighbor, path_from[neighbor])] = distances[neighbor]
 
     result = sorted(result.items(), key=lambda x: (x[1], x[0][0], x[0][1]))
     return result
