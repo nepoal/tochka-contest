@@ -96,12 +96,10 @@ def move_virus(graph: dict[str: list[str]],
                 queue.append(neighbor)
                 path_from[neighbor] = current
             if neighbor == gateway:
-                path = [neighbor]
-                prev = path_from[neighbor]
-                while prev != virus:
-                    path.append(prev)
-                    prev = path_from[prev]
-                return path[-1]
+                path = [gateway]
+                while path_from[path[-1]] is not None:
+                    path.append(path_from[path[-1]])
+                return path[-1] if len(path) >= 2 else None
 
     return None
 
