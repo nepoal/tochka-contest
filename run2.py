@@ -24,43 +24,49 @@ def solve(edges: list[tuple[str, str]]) -> list[str]:
 
     while gateways and virus:
         # Находим ближайший шлюз для удаления
-        nearest_gateways = get_nearest_gateways(graph, gateways, virus)
-        target, dist = nearest_gateways[0]
-        gateway, node = target
+        nearest_gateway = get_nearest_gateway(graph, gateways, virus)
+        if not all(nearest_gateway):
+            break
+
+        gateway, node, dist = nearest_gateway
 
         # Удаляем шлюз
         results.append(f"{gateway}-{node}")
         graph[node].remove(gateway)
         graph[gateway].remove(node)
         if not graph[gateway]:
-            graph.pop(gateway)
             gateways.remove(gateway)
+            del graph[gateway]
 
         # Находим ближайший шлюз для вируса
-        new_nearest_gateways = get_nearest_gateways(graph, gateways, virus)
-        if new_nearest_gateways:
-            target, dist = new_nearest_gateways[0]
-            gateway, node = target
+        new_nearest_gateway = get_nearest_gateway(graph, gateways, virus)
+        if not all(new_nearest_gateway):
+            break
+
+        new_gateway, new_node, new_dist = new_nearest_gateway
 
         # Перемещяем вирус
-        virus_next = move_virus(graph, virus, gateway)
-        if not virus_next:
+        virus_next = move_virus(graph, virus, new_gateway)
+        if not virus_next or virus_next.isupper():
             break
         virus = virus_next
 
     return results
 
 
-def get_nearest_gateways(graph: dict[str: list[str]],
+def get_nearest_gateway(graph: dict[str: list[str]],
                          gateways: list[str],
-                         virus: str) -> list[tuple[tuple[str, str], int]]:
+                         virus: str) -> tuple[str|None, str|None, int|None]:
     queue = deque()
     distances = {}
-    result = {}
     path_from = {}
 
     queue.append(virus)
     distances[virus] = 0
+
+    min_dist = None
+    best_gateway = None
+    best_node = None
 
     while queue:
         current = queue.popleft()
@@ -72,16 +78,24 @@ def get_nearest_gateways(graph: dict[str: list[str]],
                 distances[neighbor] = current_dist + 1
                 path_from[neighbor] = current
             if neighbor in gateways:
-                if neighbor in path_from:
-                    result[(neighbor, path_from[neighbor])] = distances[neighbor]
+                node = current
+                dist = distances[current] + 1
+                if best_gateway is None \
+                        or dist < min_dist or \
+                        (dist == min_dist and neighbor < best_gateway) or \
+                        (dist == min_dist and neighbor == best_gateway and current < best_node):
+                    min_dist = dist
+                    best_gateway = neighbor
+                    best_node = current
 
-    result = sorted(result.items(), key=lambda x: (x[1], x[0][0], x[0][1]))
-    return result
+    return best_gateway, best_node, min_dist
 
 
 def move_virus(graph: dict[str: list[str]],
                virus: str,
                gateway: str) -> str | None:
+    if gateway is None:
+        return None
     queue = deque()
     path_from = {}
 
@@ -99,7 +113,7 @@ def move_virus(graph: dict[str: list[str]],
                 path = [gateway]
                 while path_from[path[-1]] is not None:
                     path.append(path_from[path[-1]])
-                return path[-1] if len(path) >= 2 else None
+                return path[-2] if len(path) >= 2 else None
 
     return None
 
