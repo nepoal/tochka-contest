@@ -66,7 +66,7 @@ def get_nearest_gateways(graph: dict[str: list[str]],
         current = queue.popleft()
         current_dist = distances[current]
 
-        for neighbor in graph[current]:
+        for neighbor in sorted(graph[current]):
             if neighbor not in distances:
                 queue.append(neighbor)
                 distances[neighbor] = current_dist + 1
@@ -91,7 +91,7 @@ def move_virus(graph: dict[str: list[str]],
     while queue:
         current = queue.popleft()
 
-        for neighbor in graph[current]:
+        for neighbor in sorted(graph[current]):
             if neighbor not in path_from:
                 queue.append(neighbor)
                 path_from[neighbor] = current
