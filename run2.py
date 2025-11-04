@@ -1,5 +1,6 @@
 import sys
 from collections import defaultdict, deque
+from copy import deepcopy
 
 
 def solve(edges: list[tuple[str, str]]) -> list[str]:
@@ -20,38 +21,61 @@ def solve(edges: list[tuple[str, str]]) -> list[str]:
 
     gateways = sorted({node for node in graph if node.isupper()})
     virus = 'a'
-    results = []
+    states = {}
+    result = sort_states(states, graph, gateways, virus)
 
-    while gateways and virus:
-        # Находим ближайший шлюз для удаления
-        nearest_gateway = get_nearest_gateway(graph, gateways, virus)
-        if not all(nearest_gateway):
-            break
+    return result
 
-        gateway, node, dist = nearest_gateway
 
-        # Удаляем шлюз
-        results.append(f"{gateway}-{node}")
-        graph[node].remove(gateway)
-        graph[gateway].remove(node)
-        if not graph[gateway]:
-            gateways.remove(gateway)
-            del graph[gateway]
+def sort_states(states: dict[str, frozenset[tuple[str, str]]: list[str]],
+                graph: dict[str: list[str]],
+                gateways: list[str],
+                virus: str) -> list[str] | None:
+    nodes = set()
+    for gateway in gateways:
+        for node in graph.get(gateway, []):
+            nodes.add((gateway, node))
 
-        # Находим ближайший шлюз для вируса
-        new_nearest_gateway = get_nearest_gateway(graph, gateways, virus)
-        if not all(new_nearest_gateway):
-            break
+    nodes = frozenset(nodes)
+    state = virus, nodes
 
-        new_gateway, new_node, new_dist = new_nearest_gateway
+    if state in states:
+        return states[state]
 
-        # Перемещяем вирус
-        virus_next = move_virus(graph, virus, new_gateway)
-        if not virus_next or virus_next.isupper():
-            break
-        virus = virus_next
+    nearest_gateway = get_nearest_gateway(graph, gateways, virus)
+    if not all(nearest_gateway):
+        states[state] = []
+        return []
 
-    return results
+    possible_nodes = []
+    for gateway in sorted(gateways):
+        for node in sorted(graph.get(gateway, [])):
+            possible_nodes.append((gateway, node))
+
+    for gateway, node in sorted(possible_nodes):
+        new_graph = deepcopy(graph)
+        new_graph[gateway].remove(node)
+        new_graph[node].remove(gateway)
+
+        new_gateway, new_node, new_dist = get_nearest_gateway(new_graph, gateways, virus)
+        if new_gateway is None:
+            states[state] = [f"{gateway}-{node}"]
+            return [f"{gateway}-{node}"]
+
+        if new_dist == 1:
+            continue
+
+        next_virus = move_virus(new_graph, virus, new_gateway)
+        if next_virus is None or next_virus.isupper():
+            continue
+
+        new_state = sort_states(states, new_graph, gateways, next_virus)
+        if new_state is not None:
+            states[state] = [f"{gateway}-{node}"] + new_state
+            return states[state]
+
+    states[state] = None
+    return None
 
 
 def get_nearest_gateway(graph: dict[str: list[str]],
